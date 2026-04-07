@@ -39,14 +39,34 @@ if template_id is None:
   print('请设置 TEMPLATE_ID')
   exit(422)
 
+# 全局请求头（解决接口拦截，核心修复）
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 if city is None or weather_apikey is None:
-  print('没有城市行政区域编码或者apikey')
-  city_id = None
+  print('没有城市行政区域编码或者apikey，将使用默认城市：哈尔滨')
+  city_id = "101050101"  # 哈尔滨固定城市ID
+  city_name = "哈尔滨"
 else:
-  city_idurl = f"https://geoapi.qweather.com/v2/city/lookup?location={city}&key={wai}"
-  city_data = json.loads(requests.get(city_idurl).content.decode('utf-8'))['location'][0]
-  city_id = city_data.get("id")
-  city_name = city_data.get('name')
+  try:
+    city_idurl = f"https://geoapi.qweather.com/v2/city/lookup?location={city}&key={wai}"
+    # 带请求头请求 + 超时设置
+    response = requests.get(city_idurl, headers=headers, timeout=10)
+    city_data = json.loads(response.text)['location'][0]
+    city_id = city_data.get("id")
+    city_name = city_data.get('name')
+    print(f"成功获取城市：{city_name}")
+  except:
+    # 请求失败 → 自动切换为哈尔滨（终极兜底）
+    print("获取城市失败，自动切换为默认城市：哈尔滨")
+    city_id = "101050101"
+    city_name = "哈尔滨"
+# if city is None or weather_apikey is None:
+#   print('没有城市行政区域编码或者apikey')
+#   city_id = None
+# else:
+#   city_idurl = f"https://geoapi.qweather.com/v2/city/lookup?location={city}&key={wai}"
+#   city_data = json.loads(requests.get(city_idurl).content.decode('utf-8'))['location'][0]
+#   city_id = city_data.get("id")
+#   city_name = city_data.get('name')
 
 # weather 直接返回对象，在使用的地方用字段进行调用。
 def get_weather():
