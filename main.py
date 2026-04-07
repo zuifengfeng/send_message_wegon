@@ -207,6 +207,10 @@ if weather is None:
   print('获取天气失败')
   exit(422)
 data = {
+    "title": {
+    "value": "早上好！今天也是元气满满的一天！",
+    "color": "#FF69B4"
+  },
   # 城市
   "city": {
     "value": city_name,
