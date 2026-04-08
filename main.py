@@ -499,11 +499,36 @@ def get_counter_left(aim_date):
   return (next - today).days
 
 # 彩虹屁 接口不稳定，所以失败的话会重新调用，直到成功
+# def get_words():
+#   words = requests.get("https://api.shadiao.pro/chp")
+#   if words.status_code != 200:
+#     return get_words()
+#   return words.json()['data']['text']
 def get_words():
-  words = requests.get("https://api.shadiao.pro/chp")
-  if words.status_code != 200:
-    return get_words()
-  return words.json()['data']['text']
+    """获取每日寄语，确保不超过20个字（包括标点）"""
+    max_attempts = 20  # 最大尝试次数，避免死循环
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            words = requests.get("https://api.shadiao.pro/chp", timeout=10)
+            if words.status_code == 200:
+                text = words.json()['data']['text']
+                # 检查字数（中文字符和标点都算1个字）
+                if len(text) <= 20:
+                    return text
+            attempt += 1
+        except:
+            attempt += 1
+            continue
+    
+    # 如果尝试了max_attempts次都没找到合适的，返回一个默认的短句
+    default_messages = [
+        "今天也要加油鸭！",
+        "新的一天，新的希望！",
+        "今天又是元气满满的一天！！",
+        "相信自己，你可以的！"
+    ]
+    return random.choice(default_messages)
 
 def format_temperature(temperature):
   return math.floor(temperature)
