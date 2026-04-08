@@ -1,3 +1,323 @@
+# from datetime import date, datetime, timedelta
+# import math
+# from webbrowser import get
+# from wechatpy import WeChatClient, WeChatClientException
+# from wechatpy.client.api import WeChatMessage
+# import requests
+# import os
+# import random
+# import re
+# import json
+
+# nowtime = datetime.utcnow() + timedelta(hours=8)  # 东八区时间
+# today = datetime.strptime(str(nowtime.date()), "%Y-%m-%d") #今天的日期
+
+# # 开始日正数
+# start_date = os.getenv('START_DATE')
+# city = os.getenv('CITY')
+# weather_apikey = os.getenv('WEATHER_APIKEY')
+# wai = weather_apikey
+# # 生日，最终日倒数
+# # birthday = os.getenv('BIRTHDAY')
+# end_date = os.getenv('END_DATE')
+
+# app_id = os.getenv('APP_ID')
+# app_secret = os.getenv('APP_SECRET')
+
+# user_ids = os.getenv('USER_ID', '').split("\n")
+# template_id = os.getenv('TEMPLATE_ID')
+
+# if app_id is None or app_secret is None:
+#   print('请设置 APP_ID 和 APP_SECRET')
+#   exit(422)
+
+# if not user_ids:
+#   print('请设置 USER_ID，若存在多个 ID 用回车分开')
+#   exit(422)
+
+# if template_id is None:
+#   print('请设置 TEMPLATE_ID')
+#   exit(422)
+
+
+# # ==========================================================================
+# # if city is None or weather_apikey is None:
+# #   print('没有城市行政区域编码或者apikey')
+# #   city_id = None
+# # else:
+# #   city_idurl = f"https://geoapi.qweather.com/v2/city/lookup?location={city}&key={wai}"
+# #   city_data = json.loads(requests.get(city_idurl).content.decode('utf-8'))['location'][0]
+# #   city_id = city_data.get("id")
+# #   city_name = city_data.get('name')
+
+# # weather 直接返回对象，在使用的地方用字段进行调用。
+# # def get_weather():
+  
+# #   if city_id is None:
+# #     return None
+# #   weatherurl = f"https://devapi.qweather.com/v7/weather/3d?location={city_id}&key={wai}&lang=zh"
+# #   weather = json.loads(requests.get(weatherurl).content.decode('utf-8'))["daily"][0]
+# #   return weather
+# # #   res = requests.get(url).json()
+# # #   if res is None:
+# # #     return None
+# # #   weather = res['data']['list'][0]
+# # #   return weather
+
+# # def get_realtimeweather():
+# #   if city_id is None:
+# #     return None
+# #   realtimeweatherurl = f"https://devapi.qweather.com/v7/weather/now?location={city_id}&key={wai}&lang=zh"
+# #   realtimeweather = json.loads(requests.get(realtimeweatherurl).content.decode('utf-8'))["now"]["temp"]
+# #   return realtimeweather
+
+# # # 获取空气质量
+# # def get_airqu():
+# #   air_quurl = f'https://devapi.qweather.com/v7/air/5d?location={city_id}&key={wai}&lang-zh'
+# #   if city_id is None:
+# #     return None
+# #   airqu = json.loads(requests.get(air_quurl).content.decode('utf-8'))["daily"][0]
+# #   return airqu
+
+# # ====================== 国家气象+高德 双接口 动态城市版（零报错）======================
+# # 全局请求头（防拦截）
+# headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+# # 从环境变量获取城市，失败默认哈尔滨
+# city = os.getenv('CITY')
+# city_name = city if city else "哈尔滨"
+# # 国家气象固定使用城市名称，无需ID
+# use_city_name = city_name
+
+# # ===================== 天气获取：国家气象优先 → 高德备用 → 固定兜底 =====================
+# def get_weather():
+#     try:
+#         # 1. 首选：国家气象平台（免KEY，支持城市名）
+#         res = requests.get(f"http://t.weather.itboy.net/api/weather/city/{use_city_name}", headers=headers, timeout=10)
+#         data = res.json()
+#         forecast = data['data']['forecast'][0]
+#         return {
+#             "textDay": forecast['type'],
+#             "textNight": forecast['type'],
+#             "humidity": data['data']['shidu'].replace("%", ""),
+#             "windScaleDay": forecast['fl'].replace("级", ""),
+#             "windScaleNight": forecast['fl'].replace("级", ""),
+#             "tempMax": forecast['high'].replace("℃", ""),
+#             "tempMin": forecast['low'].replace("℃", "")
+#         }
+#     except:
+#         try:
+#             # 2. 备用：高德地图天气（免KEY，公共测试key）
+#             res = requests.get(f"https://restapi.amap.com/v3/weather/weatherInfo?city={use_city_name}&key=3bb51bde4855b67b73f502d32e1a8d9b&extensions=base", headers=headers, timeout=10)
+#             data = res.json()
+#             weather = data['lives'][0]
+#             return {
+#                 "textDay": weather['weather'],
+#                 "textNight": weather['weather'],
+#                 "humidity": weather['humidity'],
+#                 "windScaleDay": weather['windpower'],
+#                 "windScaleNight": weather['windpower'],
+#                 "tempMax": weather['temperature'],
+#                 "tempMin": str(int(weather['temperature'])-5)
+#             }
+#         except:
+#             # 3. 终极兜底：固定天气数据（永远不报错）
+#             return {
+#                 "textDay": "晴", "textNight": "晴", "humidity": "50",
+#                 "windScaleDay": "2", "windScaleNight": "2",
+#                 "tempMax": "20", "tempMin": "8"
+#             }
+
+# def get_realtimeweather():
+#     try:
+#         # 实时温度 - 国家气象
+#         res = requests.get(f"http://t.weather.itboy.net/api/weather/city/{use_city_name}", headers=headers, timeout=10)
+#         return res.json()['data']['wendu']
+#     except:
+#         # 兜底温度
+#         return "15"
+
+# def get_airqu():
+#     # 空气质量固定兜底（避免额外接口报错）
+#     return {"aqi": "50", "category": "优"}
+# # ==========================================================================
+
+# # 获取当前日期为星期几
+# def get_week_day():
+#   week_list = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+#   week_day = week_list[datetime.date(today).weekday()]
+#   return week_day
+
+# # 各种正数日
+# def get_memorial_days_count(aim_date):
+#   if aim_date is None:
+#     print('没有设置 开始日')
+#     return 0
+#   delta = today - datetime.strptime(aim_date, "%Y-%m-%d")
+#   return delta.days
+
+# # 各种倒计时
+# def get_counter_left(aim_date):
+#   if aim_date is None:
+#     return 0
+
+#   # 为了经常填错日期的同学们
+#   if re.match(r'^\d{1,2}\-\d{1,2}$', aim_date):
+#     next = datetime.strptime(str(date.today().year) + "-" + aim_date, "%Y-%m-%d")
+#   elif re.match(r'^\d{2,4}\-\d{1,2}\-\d{1,2}$', aim_date):
+#     next = datetime.strptime(aim_date, "%Y-%m-%d")
+#     next = next.replace(nowtime.year)
+#   else:
+#     print('日期格式不符合要求')
+    
+#   if next < nowtime:
+#     next = next.replace(year=next.year + 1)
+#   return (next - today).days
+
+# # 彩虹屁 接口不稳定，所以失败的话会重新调用，直到成功
+# def get_words():
+#   words = requests.get("https://api.shadiao.pro/chp")
+#   if words.status_code != 200:
+#     return get_words()
+#   return words.json()['data']['text']
+
+# def format_temperature(temperature):
+#   return math.floor(temperature)
+
+# # 随机颜色
+# def get_random_color():
+#   return "#%06x" % random.randint(0, 0xFFFFFF)
+
+# # 返回一个数组，循环产生变量
+# # def split_birthday():
+# #   if birthday is None:
+# #     return None
+# #   return birthday.split('\n')
+
+# # 对传入的多个日期进行分割
+# def split_dates(aim_dates):
+#   if aim_dates is None:
+#     return None
+#   return aim_dates.split('\n')
+
+# weather = get_weather()
+# airqu = get_airqu()
+# realtimeweather = get_realtimeweather()
+
+# if weather is None:
+#   print('获取天气失败')
+#   exit(422)
+# data = {
+#     "title": {
+#     "value": "早上好！今天也是元气满满的一天！",
+#     "color": "#FF69B4"
+#   },
+#   # 城市
+#   "city": {
+#     "value": city_name,
+#     "color": get_random_color()
+#   },
+#   # 今天日期
+#   "date": {
+#     "value": today.strftime('%Y年%m月%d日'),
+#     "color": get_random_color()
+#   },
+#   # 今天周几
+#   "week_day": {
+#     "value": get_week_day(),
+#     "color": get_random_color()
+#   },
+#   # 天气状况
+#   "weather": {
+#     "value": f"白天：{weather['textDay']}  ;  夜晚：{weather['textNight']}",
+#     "color": get_random_color()
+#   },
+#   # 湿度
+#   "humidity": {
+#     "value": weather['humidity']+"%",
+#     "color": get_random_color()
+#   },
+#   # 风力
+#   "wind": {
+#     "value": f"白天：{weather['windScaleDay']}级  ;  夜晚：{weather['windScaleNight']}级",
+#     "color": get_random_color()
+#   },
+
+#   "air_data": {
+#     "value": airqu['aqi'],
+#     "color": get_random_color()
+#   },
+#   # 空气质量
+#   "air_quality": {
+#     "value": airqu['category'],
+#     "color": get_random_color()
+#   },
+#   # 实时温度
+#   "temperature": {
+#     "value": realtimeweather,
+#     "color": get_random_color()
+#   },
+#   # 最高温
+#   "highest": {
+#     "value": weather['tempMax'],
+#     "color": get_random_color()
+#   },
+#   # 最低温度
+#   "lowest": {
+#     "value": weather['tempMin'],
+#     "color": get_random_color()
+#   },
+#   # 正计时
+#   # "having_day": {
+#   #   "value": get_memorial_days_count(),
+#   #   "color": get_random_color()
+#   # },
+#   # 每日一言
+#   "words": {
+#     "value": get_words(),
+#     "color": get_random_color()
+#   },
+#   # 倒计时
+#   # "endday_left": get_counter_left,
+#   # "color": get_random_color()
+# }
+
+# # 倒计时添加到数据
+# for index, aim_date in enumerate(split_dates(end_date)):
+#   key_name = "endday_left"
+#   if index != 0:
+#     key_name = key_name + "_%d" % index
+#   data[key_name] = {
+#     "value": get_counter_left(aim_date),
+#     "color": get_random_color()
+#   }
+
+# # 各种正计时
+# for index, aim_date in enumerate(split_dates(start_date)):
+#   key_name = "having_day"
+#   if index != 0:
+#     key_name = key_name + "_%d" % index
+#   data[key_name] = {
+#     "value": get_memorial_days_count(aim_date),
+#     "color": get_random_color()
+#   }
+
+# if __name__ == '__main__':
+#   try:
+#     client = WeChatClient(app_id, app_secret)
+#   except WeChatClientException as e:
+#     print('微信获取 token 失败，请检查 APP_ID 和 APP_SECRET，或当日调用量是否已达到微信限制。')
+#     exit(502)
+
+#   wm = WeChatMessage(client)
+#   count = 0
+#   try:
+#     for user_id in user_ids:
+#       print('正在发送给 %s, 数据如下：%s' % (user_id, data))
+#       res = wm.send_template(user_id, template_id, data)
+#       count+=1
+#   except WeChatClientException as e:
+#     print('微信端返回错误：%s。错误代码：%d' % (e.errmsg, e.errcode))
+
 from datetime import date, datetime, timedelta
 import math
 from webbrowser import get
@@ -8,6 +328,8 @@ import os
 import random
 import re
 import json
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 nowtime = datetime.utcnow() + timedelta(hours=8)  # 东八区时间
 today = datetime.strptime(str(nowtime.date()), "%Y-%m-%d") #今天的日期
@@ -15,8 +337,6 @@ today = datetime.strptime(str(nowtime.date()), "%Y-%m-%d") #今天的日期
 # 开始日正数
 start_date = os.getenv('START_DATE')
 city = os.getenv('CITY')
-weather_apikey = os.getenv('WEATHER_APIKEY')
-wai = weather_apikey
 # 生日，最终日倒数
 # birthday = os.getenv('BIRTHDAY')
 end_date = os.getenv('END_DATE')
@@ -39,106 +359,111 @@ if template_id is None:
   print('请设置 TEMPLATE_ID')
   exit(422)
 
+# ====================== 使用国家气象接口（无保底版）======================
+# 城市编码字典
+city_code = {
+    "哈尔滨": "101050101",
+    "鹤壁": "101180901",
+    "北京": "101010100",
+    "上海": "101020100",
+    "广州": "101280101",
+    "深圳": "101280601",
+    "杭州": "101210101",
+    "成都": "101270101",
+    "武汉": "101200101",
+    "西安": "101110101",
+    "南京": "101190101",
+    "天津": "101030100",
+    "重庆": "101040100",
+    "郑州": "101180101",
+    "长沙": "101250101",
+    "济南": "101120101",
+    "合肥": "101220101",
+    "福州": "101230101",
+    "南昌": "101240101",
+    "昆明": "101290101",
+    "沈阳": "101070101",
+    "长春": "101060101",
+    "大连": "101070201",
+    "青岛": "101120201",
+    "宁波": "101210401",
+    "厦门": "101230201",
+    "苏州": "101190401",
+    "无锡": "101190201",
+    "东莞": "101281601",
+    "佛山": "101280800"
+}
 
-# ==========================================================================
-# if city is None or weather_apikey is None:
-#   print('没有城市行政区域编码或者apikey')
-#   city_id = None
-# else:
-#   city_idurl = f"https://geoapi.qweather.com/v2/city/lookup?location={city}&key={wai}"
-#   city_data = json.loads(requests.get(city_idurl).content.decode('utf-8'))['location'][0]
-#   city_id = city_data.get("id")
-#   city_name = city_data.get('name')
-
-# weather 直接返回对象，在使用的地方用字段进行调用。
-# def get_weather():
-  
-#   if city_id is None:
-#     return None
-#   weatherurl = f"https://devapi.qweather.com/v7/weather/3d?location={city_id}&key={wai}&lang=zh"
-#   weather = json.loads(requests.get(weatherurl).content.decode('utf-8'))["daily"][0]
-#   return weather
-# #   res = requests.get(url).json()
-# #   if res is None:
-# #     return None
-# #   weather = res['data']['list'][0]
-# #   return weather
-
-# def get_realtimeweather():
-#   if city_id is None:
-#     return None
-#   realtimeweatherurl = f"https://devapi.qweather.com/v7/weather/now?location={city_id}&key={wai}&lang=zh"
-#   realtimeweather = json.loads(requests.get(realtimeweatherurl).content.decode('utf-8'))["now"]["temp"]
-#   return realtimeweather
-
-# # 获取空气质量
-# def get_airqu():
-#   air_quurl = f'https://devapi.qweather.com/v7/air/5d?location={city_id}&key={wai}&lang-zh'
-#   if city_id is None:
-#     return None
-#   airqu = json.loads(requests.get(air_quurl).content.decode('utf-8'))["daily"][0]
-#   return airqu
-
-# ====================== 国家气象+高德 双接口 动态城市版（零报错）======================
-# 全局请求头（防拦截）
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-# 从环境变量获取城市，失败默认哈尔滨
-city = os.getenv('CITY')
+# 从环境变量获取城市，如果未设置则使用默认城市
 city_name = city if city else "哈尔滨"
-# 国家气象固定使用城市名称，无需ID
-use_city_name = city_name
 
-# ===================== 天气获取：国家气象优先 → 高德备用 → 固定兜底 =====================
+# 检查城市是否在支持列表中
+if city_name not in city_code:
+    supported_cities = ", ".join(city_code.keys())
+    print(f"错误：不支持的城市 '{city_name}'。支持的城市包括：{supported_cities}")
+    exit(422)
+
+# 天气接口URL
+weather_url = f"http://t.weather.sojson.com/api/weather/city/{city_code[city_name]}"
+
 def get_weather():
+    """获取天气预报信息，无保底，失败直接报错"""
     try:
-        # 1. 首选：国家气象平台（免KEY，支持城市名）
-        res = requests.get(f"http://t.weather.itboy.net/api/weather/city/{use_city_name}", headers=headers, timeout=10)
+        res = requests.get(weather_url, timeout=10, verify=False)
         data = res.json()
-        forecast = data['data']['forecast'][0]
+        
+        if data.get("status") != 200:
+            print(f"获取天气失败，状态码：{data.get('status')}")
+            exit(422)
+            
+        d = data["data"]
+        w = d["forecast"][0]
+        
         return {
-            "textDay": forecast['type'],
-            "textNight": forecast['type'],
-            "humidity": data['data']['shidu'].replace("%", ""),
-            "windScaleDay": forecast['fl'].replace("级", ""),
-            "windScaleNight": forecast['fl'].replace("级", ""),
-            "tempMax": forecast['high'].replace("℃", ""),
-            "tempMin": forecast['low'].replace("℃", "")
+            "textDay": w['type'],
+            "textNight": w['type'],
+            "humidity": d['shidu'].replace("%", ""),
+            "windScaleDay": w['fl'].replace("级", ""),
+            "windScaleNight": w['fl'].replace("级", ""),
+            "tempMax": w['high'].replace('高温 ', '').replace('℃', ''),
+            "tempMin": w['low'].replace('低温 ', '').replace('℃', '')
         }
-    except:
-        try:
-            # 2. 备用：高德地图天气（免KEY，公共测试key）
-            res = requests.get(f"https://restapi.amap.com/v3/weather/weatherInfo?city={use_city_name}&key=3bb51bde4855b67b73f502d32e1a8d9b&extensions=base", headers=headers, timeout=10)
-            data = res.json()
-            weather = data['lives'][0]
-            return {
-                "textDay": weather['weather'],
-                "textNight": weather['weather'],
-                "humidity": weather['humidity'],
-                "windScaleDay": weather['windpower'],
-                "windScaleNight": weather['windpower'],
-                "tempMax": weather['temperature'],
-                "tempMin": str(int(weather['temperature'])-5)
-            }
-        except:
-            # 3. 终极兜底：固定天气数据（永远不报错）
-            return {
-                "textDay": "晴", "textNight": "晴", "humidity": "50",
-                "windScaleDay": "2", "windScaleNight": "2",
-                "tempMax": "20", "tempMin": "8"
-            }
+    except Exception as e:
+        print(f"获取天气数据时出错：{repr(e)}")
+        exit(422)
 
 def get_realtimeweather():
+    """获取实时温度，无保底，失败直接报错"""
     try:
-        # 实时温度 - 国家气象
-        res = requests.get(f"http://t.weather.itboy.net/api/weather/city/{use_city_name}", headers=headers, timeout=10)
-        return res.json()['data']['wendu']
-    except:
-        # 兜底温度
-        return "15"
+        res = requests.get(weather_url, timeout=10, verify=False)
+        data = res.json()
+        
+        if data.get("status") != 200:
+            print(f"获取实时温度失败，状态码：{data.get('status')}")
+            exit(422)
+            
+        return data["data"]["wendu"]
+    except Exception as e:
+        print(f"获取实时温度时出错：{repr(e)}")
+        exit(422)
 
 def get_airqu():
-    # 空气质量固定兜底（避免额外接口报错）
-    return {"aqi": "50", "category": "优"}
+    """获取空气质量信息，无保底，失败直接报错"""
+    try:
+        res = requests.get(weather_url, timeout=10, verify=False)
+        data = res.json()
+        
+        if data.get("status") != 200:
+            print(f"获取空气质量失败，状态码：{data.get('status')}")
+            exit(422)
+            
+        return {
+            "aqi": str(data["data"]["pm25"]),
+            "category": data["data"]["quality"]
+        }
+    except Exception as e:
+        print(f"获取空气质量时出错：{repr(e)}")
+        exit(422)
 # ==========================================================================
 
 # 获取当前日期为星期几
@@ -187,25 +512,17 @@ def format_temperature(temperature):
 def get_random_color():
   return "#%06x" % random.randint(0, 0xFFFFFF)
 
-# 返回一个数组，循环产生变量
-# def split_birthday():
-#   if birthday is None:
-#     return None
-#   return birthday.split('\n')
-
 # 对传入的多个日期进行分割
 def split_dates(aim_dates):
   if aim_dates is None:
     return None
   return aim_dates.split('\n')
 
+# 获取天气数据，如果失败会直接退出
 weather = get_weather()
 airqu = get_airqu()
 realtimeweather = get_realtimeweather()
 
-if weather is None:
-  print('获取天气失败')
-  exit(422)
 data = {
     "title": {
     "value": "早上好！今天也是元气满满的一天！",
@@ -266,19 +583,11 @@ data = {
     "value": weather['tempMin'],
     "color": get_random_color()
   },
-  # 正计时
-  # "having_day": {
-  #   "value": get_memorial_days_count(),
-  #   "color": get_random_color()
-  # },
   # 每日一言
   "words": {
     "value": get_words(),
     "color": get_random_color()
   },
-  # 倒计时
-  # "endday_left": get_counter_left,
-  # "color": get_random_color()
 }
 
 # 倒计时添加到数据
@@ -320,3 +629,6 @@ if __name__ == '__main__':
     exit(502)
 
   print("发送了" + str(count) + "条消息")
+#     exit(502)
+
+#   print("发送了" + str(count) + "条消息")
